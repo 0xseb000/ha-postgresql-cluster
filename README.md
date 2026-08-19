@@ -67,13 +67,13 @@ Ausfall, welche Replica übernimmt, und gliedert zurückkehrende Nodes wieder ei
 
 ### 3.2 Nodes
 
-| Hostname | Rolle | Ansible-Gruppe | IP |
+| Hostname | Rolle | Ansible-Gruppe |
 |---|---|---|---|
-| `haproxy01` | Reverse Proxy / Load Balancer | `haproxy` | 10.10.0.10 |
-| `pg01` | PostgreSQL + Patroni | `patroni` | 10.10.0.21 |
-| `pg02` | PostgreSQL + Patroni | `patroni` | 10.10.0.22 |
-| `pg03` | PostgreSQL + Patroni | `patroni` | 10.10.0.23 |
-| `etcd01` | etcd | `etcd` | 10.10.0.30 |
+| `haproxy01` | Reverse Proxy / Load Balancer | `haproxy` |
+| `pg01` | PostgreSQL + Patroni | `patroni` |
+| `pg02` | PostgreSQL + Patroni | `patroni` |
+| `pg03` | PostgreSQL + Patroni | `patroni` |
+| `etcd01` | etcd | `etcd` |
 
 Alle Nodes laufen auf Debian 13, erreichbar per SSH. Die Ansible-Control-Node
 ist die Arbeitsstation und gehört nicht zum Cluster.
