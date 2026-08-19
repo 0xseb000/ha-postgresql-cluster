@@ -120,37 +120,9 @@ ha-postgresql-cluster/
 └── tests/             # Testskripte
 ```
 
-### 4.3 Inventar
-
-Die Rollen werden allein über Ansible-Gruppen vergeben:
-
-```ini
-[haproxy]
-haproxy01 ansible_host=10.10.0.10
-
-[patroni]
-pg01 ansible_host=10.10.0.21
-pg02 ansible_host=10.10.0.22
-pg03 ansible_host=10.10.0.23
-
-[etcd]
-etcd01 ansible_host=10.10.0.30
-```
-
-Ein vierter Datenbank-Node entsteht durch eine zusätzliche Zeile und einen
-erneuten Playbook-Lauf — ohne Änderung an Rollen oder Templates.
-
-### 4.4 Deployment
-
-1. Fünf Debian-VMs bereitstellen, SSH-Key verteilen, ins Inventar eintragen.
-2. `ansible-playbook -i inventory/hosts.ini site.yml` ausführen. Das Playbook
-   richtet der Reihe nach die Basis, etcd, die PostgreSQL-Nodes mit Patroni und
-   zum Schluss den HAProxy ein.
-3. Cluster gemäss Kapitel 5 prüfen.
-
 ---
 
-## 5 Tests
+## 4 Tests
 
 Geprüft wird der Cluster im Wesentlichen über Patroni: **Mit Patroni wird
 getestet, ob die Datenbanken laufen** und wer gerade Leader beziehungsweise
@@ -176,7 +148,7 @@ Messung reproduzierbar ist.
 
 ---
 
-## 6 Bekannte Einschränkungen
+## 5 Bekannte Einschränkungen
 
 | # | Einschränkung | Umgang |
 |---|---|---|
@@ -188,7 +160,7 @@ Messung reproduzierbar ist.
 
 ---
 
-## 7 Ausblick
+## 6 Ausblick
 
 - etcd als Cluster mit drei Nodes — der wichtigste Schritt Richtung Produktion.
 - HAProxy redundant mit Keepalived und einer virtuellen IP.
@@ -199,7 +171,7 @@ Messung reproduzierbar ist.
 
 ---
 
-## 8 Begriffe
+## 7 Begriffe
 
 | Begriff | Bedeutung |
 |---|---|
