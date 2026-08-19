@@ -101,27 +101,6 @@ anderer Leader existiert, und hängt ihn automatisch als Replica an.
 
 ---
 
-## 4 Umsetzung
-
-### 4.1 Werkzeuge
-
-Debian 13, PostgreSQL 17, Patroni 4, etcd 3.5, HAProxy 3, Ansible 2.16+.
-
-### 4.2 Repository-Struktur
-
-```
-ha-postgresql-cluster/
-├── README.md          # diese Spezifikation
-├── doc/               # Auftrag und Projektunterlagen
-├── assets/            # Schema und Bilder
-├── inventory/         # hosts.ini, group_vars, host_vars
-├── roles/             # common, etcd, patroni, haproxy
-├── site.yml           # Gesamt-Playbook
-└── tests/             # Testskripte
-```
-
----
-
 ## 4 Tests
 
 Geprüft wird der Cluster im Wesentlichen über Patroni: **Mit Patroni wird
@@ -174,7 +153,7 @@ Messung reproduzierbar ist.
 ## 7 Begriffe
 
 | Begriff | Bedeutung |
-|---|---|
+|---------|-----------|
 | **Leader / Primary** | Der Node, der Schreibzugriffe annimmt. Genau einer pro Cluster. |
 | **Replica / Standby** | Node, der die Daten des Leaders übernimmt und nur Lesezugriffe erlaubt. |
 | **Failover** | Ungeplanter Rollenwechsel nach einem Ausfall. |
