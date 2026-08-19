@@ -68,7 +68,7 @@ Ausfall, welche Replica übernimmt, und gliedert zurückkehrende Nodes wieder ei
 ### 3.2 Nodes
 
 | Hostname | Rolle | Ansible-Gruppe |
-|---|---|---|---|
+|----------|-------|----------------|
 | `haproxy01` | Reverse Proxy / Load Balancer | `haproxy` |
 | `pg01` | PostgreSQL + Patroni | `patroni` |
 | `pg02` | PostgreSQL + Patroni | `patroni` |
