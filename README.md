@@ -152,7 +152,7 @@ Messung reproduzierbar ist.
 | **Failover** | Ungeplanter Rollenwechsel nach einem Ausfall. |
 | **Switchover** | Geplanter, kontrollierter Rollenwechsel. |
 | **Recovery Time Objective (RTO)** | Maximal tolerierte Ausfallzeit. |
-| **Recovery Point Objective (RPO)** | Maximal tolerierter Datenverlust; 0 heisst: keine bestätigte Transaktion geht verloren. 24h oder 12h haben nicht den gleichen Impact |
+| **Recovery Point Objective (RPO)** | Maximal tolerierter Datenverlust; 0 heisst: keine bestätigte Transaktion geht verloren.|
 | **Distributed Configuration Store (DCS)** | Verteilter Speicher für den Cluster-Zustand, hier etcd. |
 | **Split-Brain** | Fehlerzustand, in dem zwei Nodes gleichzeitig Schreibzugriffe annehmen. |
 
