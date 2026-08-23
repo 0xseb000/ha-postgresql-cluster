@@ -4,7 +4,7 @@
 
 Eine einzelne Datenbank ist ein Single Point of Failure: Fällt der Server aus,
 steht die Applikation still. Dieses Projekt baut deshalb einen PostgreSQL-Cluster,
-der den Ausfall eines Nodes automatisch übersteht — ohne manuellen Eingriff und
+der den Ausfall eines Nodes automatisch übersteht. Ohne manuellen Eingriff und
 ohne dass bestätigte Transaktionen verloren gehen.
 
 Der Cluster besteht aus drei PostgreSQL-Nodes (ein Leader, zwei Replicas), die
@@ -12,22 +12,19 @@ von Patroni verwaltet werden, einem etcd-Node für die Leader-Wahl und einem
 HAProxy als einzigem Einstiegspunkt für die Applikation. Der gesamte Aufbau wird
 mit Ansible automatisiert.
 
----
-
 ## 2 Ziele
 
-| ID | Ziel |
+|    | Ziel |
 |----|------|
-| **Z-01** | Drei Nodes: genau ein schreibender Leader, zwei lesende Replicas. |
-| **Z-02** | Automatischer Failover bei Ausfall des Leaders in ≤ 60 Sekunden. |
-| **Z-03** | Kein Verlust bestätigter Transaktionen (RPO = 0). |
-| **Z-04** | Die Applikation verbindet sich gegen einen einzigen, stabilen Endpunkt. |
-| **Z-05** | Lesende Last geht an die Replicas, schreibende an den Leader. |
-| **Z-06** | Ein zurückkehrender Node hängt sich automatisch als Replica an. |
-| **Z-07** | Der Aufbau ist mit Ansible reproduzierbar und idempotent. |
-| **Z-08** | Kein Split-Brain: nie akzeptieren zwei Nodes gleichzeitig Schreibzugriffe. |
+| **1** | Drei Nodes: genau ein schreibender Leader, zwei lesende Replicas. |
+| **2** | Automatischer Failover bei Ausfall des Leaders in ≤ 60 Sekunden. |
+| **3** | Kein Verlust bestätigter Transaktionen (RPO = 0). |
+| **4** | Die Applikation verbindet sich gegen einen einzigen, stabilen Endpunkt. |
+| **5** | Lesende Last geht an die Replicas, schreibende an den Leader. |
+| **6** | Ein zurückkehrender Node hängt sich automatisch als Replica an. |
+| **7** | Der Aufbau ist mit Ansible reproduzierbar und idempotent. |
+| **8** | Kein Split-Brain: nie akzeptieren zwei Nodes gleichzeitig Schreibzugriffe. |
 
----
 
 ## 3 Architektur
 
@@ -59,7 +56,8 @@ Replica zurück.
 **etcd** ist die gemeinsame Wahrheitsquelle: Dort liegt ein Leader-Key, den der
 aktuelle Leader regelmässig erneuern muss. Erneuert er ihn nicht mehr, wird der
 Key frei und eine Replica übernimmt. So ist sichergestellt, dass es nie zwei
-Leader gibt.
+Leader gibt. Für dieses Projekt gibt es nur ein etcd Node. Idealerweise gibt 
+es mehre, denn sonst wird der etcd Node zum Singe Point of Failure.
 
 **Patroni** läuft auf jedem PostgreSQL-Node und ist der Cluster-Manager: Er
 startet und stoppt PostgreSQL, hält den Leader-Key in etcd, entscheidet beim
@@ -81,8 +79,8 @@ ist die Arbeitsstation und gehört nicht zum Cluster.
 ### 3.3 Was bei einem Ausfall passiert
 
 Fällt der Leader aus, erneuert er den Leader-Key in etcd nicht mehr. Nach
-spätestens 30 Sekunden verfällt der Key, die verbleibenden Nodes bemerken das,
-und Patroni macht diejenige Replica zum neuen Leader, die am aktuellsten ist.
+spätestens 30 Sekunden (TTL) verfällt der Key, die verbleibenden Nodes bemerken das,
+und **Patroni macht diejenige Replica zum neuen Leader, die am aktuellsten ist**.
 HAProxy erkennt den Wechsel über seine Health-Checks und leitet Schreibzugriffe
 ab diesem Moment auf den neuen Leader. Insgesamt dauert das rund eine Minute.
 
@@ -95,11 +93,10 @@ anderer Leader existiert, und hängt ihn automatisch als Replica an.
 |---|---|---|
 | Replikation | synchron | Nur so gehen keine bestätigten Transaktionen verloren (RPO = 0). |
 | DCS | etcd | Leichtgewichtig und von Patroni am besten unterstützt. |
-| Verbindungsführung | HAProxy | Der Cluster meldet selbst, wer Leader ist — keine zweite Wahrheitsquelle. |
+| Verbindungsführung | HAProxy | Der Cluster meldet selbst, wer Leader ist. Keine zweite Wahrheitsquelle. |
 | Failback | keiner | Ein zurückkehrender Node bleibt Replica; das vermeidet einen zweiten Unterbruch. |
-| etcd-Nodes | nur einer | Bewusste Vereinfachung für dieses Projekt, siehe Kapitel 6. |
+| etcd-Nodes | nur einer | Bewusste Vereinfachung für dieses Projekt, siehe Kapitel 5. |
 
----
 
 ## 4 Tests
 
@@ -108,47 +105,43 @@ getestet, ob die Datenbanken laufen** und wer gerade Leader beziehungsweise
 Replica ist. Ergänzend wird über den HAProxy verbunden und ein Node absichtlich
 ausgeschaltet, um den Failover zu beobachten.
 
-| ID | Test | Erwartetes Ergebnis |
-|----|------|---------------------|
-| **T-01** | Deployment | Playbook läuft fehlerfrei durch; ein zweiter Lauf ändert nichts mehr. |
-| **T-02** | Cluster-Zustand mit Patroni prüfen | Ein Leader, zwei Replicas, alle laufen. |
-| **T-03** | Replikation | Neue Daten sind kurz darauf auf beiden Replicas sichtbar. |
-| **T-04** | Failover | Leader ausschalten: eine Replica übernimmt automatisch, Schreiben funktioniert nach rund einer Minute wieder, nichts geht verloren. |
-| **T-05** | Rejoin | Der neu gestartete Node kommt von selbst als Replica zurück. |
-| **T-06** | Geplanter Rollenwechsel | Switchover mit Patroni klappt mit nur kurzer Unterbrechung. |
-| **T-07** | Endpunkte | Port 5000 landet immer beim Leader, Port 5001 immer bei einer Replica. |
-| **T-08** | etcd-Ausfall | Der Cluster wird nur noch lesbar und erholt sich, sobald etcd zurück ist. |
-| **T-09** | Split-Brain | Auch bei einer Netzwerktrennung akzeptiert nie mehr als ein Node Schreibzugriffe. |
-| **T-10** | Erweiterung | Ein zusätzlicher Node über das Inventar erscheint als weitere Replica. |
+|    | Test | Wie geprüft wird | Erwartetes Ergebnis |
+|----|------|------------------|---------------------|
+| **1** | Deployment | Playbook zweimal hintereinander laufen lassen und die Ansible-Zusammenfassung des zweiten Laufs lesen. | Playbook läuft fehlerfrei durch; ein zweiter Lauf ändert nichts mehr. |
+| **2** | Cluster-Zustand mit Patroni prüfen | Auf einem PG-Node im Terminal `patronictl list` aufrufen und die Rollen- und Statusspalten der Ausgabe lesen. | Ein Leader, zwei Replicas, alle laufen. |
+| **3** | Replikation | Über HAProxy Port 5000 mit `psql` eine Testtabelle beschreiben, danach dieselbe Zeile direkt auf beiden Replicas abfragen. | Neue Daten sind kurz darauf auf beiden Replicas sichtbar. |
+| **4** | Failover | Leader-VM hart ausschalten, dabei `patronictl list` beobachten und in einer Schleife Schreibversuche gegen Port 5000 mit Zeitstempel protokollieren. | Leader ausschalten: eine Replica übernimmt automatisch, Schreiben funktioniert nach rund einer Minute wieder, nichts geht verloren. |
+| **5** | Rejoin | Den ausgefallenen Node wieder starten und anschliessend `patronictl list` prüfen. | Der neu gestartete Node kommt von selbst als Replica zurück. |
+| **6** | Geplanter Rollenwechsel | `patronictl switchover` ausführen und parallel die Schreibverbindung über Port 5000 mitlaufen lassen. | Switchover mit Patroni klappt mit nur kurzer Unterbrechung. |
+| **7** | Endpunkte | Über Port 5000 und Port 5001 je eine `psql`-Abfrage absetzen, die Hostname und Read-only-Status des angesprochenen Nodes zurückgibt. | Port 5000 landet immer beim Leader, Port 5001 immer bei einer Replica. |
+| **8** | etcd-Ausfall | etcd-Dienst stoppen, danach Lese- und Schreibzugriff über HAProxy testen, etcd wieder starten und erneut testen. | Der Cluster wird nur noch lesbar und erholt sich, sobald etcd zurück ist. |
+| **9** | Split-Brain | Den Leader per Firewall-Regel vom Rest des Netzes trennen und auf beiden Seiten der Trennung Schreibversuche absetzen. | Auch bei einer Netzwerktrennung akzeptiert nie mehr als ein Node Schreibzugriffe. |
+| **10** | Erweiterung | Einen vierten Node ins Ansible-Inventar eintragen, Playbook laufen lassen und `patronictl list` prüfen. | Ein zusätzlicher Node über das Inventar erscheint als weitere Replica. |
 
 Jeder Test wird im Projektbericht mit Kommando, Ausgabe und Zeitstempel
 dokumentiert. Die Failover-Tests laufen über Skripte unter `tests/`, damit die
 Messung reproduzierbar ist.
 
----
 
 ## 5 Bekannte Einschränkungen
 
-| # | Einschränkung | Umgang |
-|---|---|---|
-| R-01 | etcd läuft nur auf einem Node und ist damit ein Single Point of Failure. | Bewusst akzeptiert und in T-08 vorgeführt. Produktiv wären drei etcd-Nodes nötig. |
-| R-02 | Der HAProxy ist ebenfalls ein Single Point of Failure. | Ausserhalb des Projektumfangs; Lösung im Ausblick. |
-| R-03 | Synchrone Replikation kostet Schreibleistung. | Bewusster Preis für RPO = 0. |
-| R-04 | Kurze Netzunterbrüche können unnötige Rollenwechsel auslösen. | Patroni-Standardwerte statt Optimierung auf die kürzeste Ausfallzeit. |
-| R-05 | Knappe Projektzeit für alle Tests. | Testfälle sind priorisiert: T-01 bis T-07 sind Pflicht, der Rest ergänzend. |
+|   | Einschränkung | Umgang |
+|---|---------------|--------|
+| 1 | etcd läuft nur auf einem Node und ist damit ein Single Point of Failure. | Bewusst akzeptiert. Produktiv wären drei etcd-Nodes nötig. |
+| 2 | Der HAProxy ist ebenfalls ein Single Point of Failure. | Ausserhalb des Projektumfangs; Lösung im Ausblick. |
+| 3 | Synchrone Replikation kostet Schreibleistung. | Bewusster Preis für RPO = 0. |
+| 4 | Kurze Netzunterbrüche können unnötige Rollenwechsel auslösen. | Patroni-Standardwerte statt Optimierung auf die kürzeste Ausfallzeit. |
 
----
 
 ## 6 Ausblick
 
-- etcd als Cluster mit drei Nodes — der wichtigste Schritt Richtung Produktion.
+- etcd als Cluster mit drei Nodes, der wichtigste Schritt Richtung Produktion.
 - HAProxy redundant mit Keepalived und einer virtuellen IP.
 - Backup mit Barman oder pgBackRest: Hochverfügbarkeit schützt nicht vor einem
   versehentlichen `DROP TABLE`.
 - Monitoring von Replikation, Leader-Wechseln und etcd.
 - Connection Pooling mit PgBouncer.
 
----
 
 ## 7 Begriffe
 
@@ -158,7 +151,8 @@ Messung reproduzierbar ist.
 | **Replica / Standby** | Node, der die Daten des Leaders übernimmt und nur Lesezugriffe erlaubt. |
 | **Failover** | Ungeplanter Rollenwechsel nach einem Ausfall. |
 | **Switchover** | Geplanter, kontrollierter Rollenwechsel. |
-| **RTO** | Maximal tolerierte Ausfallzeit. |
-| **RPO** | Maximal tolerierter Datenverlust; 0 heisst: keine bestätigte Transaktion geht verloren. |
-| **DCS** | Verteilter Speicher für den Cluster-Zustand, hier etcd. |
+| **Recovery Time Objective (RTO)** | Maximal tolerierte Ausfallzeit. |
+| **Recovery Point Objective (RPO)** | Maximal tolerierter Datenverlust; 0 heisst: keine bestätigte Transaktion geht verloren. 24h oder 12h haben nicht den gleichen Impact |
+| **Distributed Configuration Store (DCS)** | Verteilter Speicher für den Cluster-Zustand, hier etcd. |
 | **Split-Brain** | Fehlerzustand, in dem zwei Nodes gleichzeitig Schreibzugriffe annehmen. |
+
