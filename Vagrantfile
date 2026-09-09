@@ -3,11 +3,11 @@ Vagrant.configure("2") do |config|
     config.vm.box = "bento/ubuntu-24.04"
 
     machines = {
-    "ha"    => { ip: "10.255.255.10", memory: 2048, cpus: 2, prl_name: "haproxy" },
-    "pg1" => { ip: "10.255.255.21", memory: 2048, cpus: 1 },
-    "pg2" => { ip: "10.255.255.22", memory: 2048, cpus: 1 },
-    "pg3" => { ip: "10.255.255.23", memory: 2048, cpus: 1 },
-    "etcd"  => { ip: "10.255.255.30", memory: 1024, cpus: 1 }
+    "ha"    => { ip: "192.168.40.10", memory: 2048, cpus: 2 },
+    "pg1" => { ip: "192.168.40.21", memory: 2048, cpus: 1 },
+    "pg2" => { ip: "192.168.40.22", memory: 2048, cpus: 1 },
+    "pg3" => { ip: "192.168.40.23", memory: 2048, cpus: 1 },
+    "etcd"  => { ip: "192.168.40.30", memory: 1024, cpus: 1 }
     }
 
     machines.each_with_index do |(name, opts), i|
@@ -16,7 +16,7 @@ Vagrant.configure("2") do |config|
             node.vm.network "private_network", ip: opts[:ip]
 
             node.vm.provider "parallels" do |prl|
-                prl.name   = opts.fetch(:prl_name, name)
+                prl.name   = name
                 prl.memory = opts[:memory]
                 prl.cpus   = opts[:cpus]
             end
